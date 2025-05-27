@@ -1,104 +1,91 @@
- body {
-        margin: 0;
-        font-family: Arial, sans-serif;
-        background-color: #fff; /* Fundo azul escuro */
-        color: #354982;
-        padding: 40px;
-    }
+ <?php
+// Ativa exibição de erros
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-    h2 {
-        text-align: center;
-        margin-bottom: 30px;
-        color: #000; /* Branco para contraste */
-    }
+define("DATABASE", "database.sqlite3");
 
-    form {
-        text-align: center;
-        margin-bottom: 20px;
-    }
+// Conecta ao banco
+try {
+    $pdo = new PDO('sqlite:' . DATABASE);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    echo "Erro ao conectar com o banco de dados: " . $e->getMessage();
+    exit;
+}
 
-    input[type="text"] {
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 6px;
-        width: 250px;
-        background-color: #f9f9f9;
-        color: #000;
-    }
+$mensagem = "";
 
-    input[type="text"]::placeholder {
-        color: #888;
+// EXCLUSÃO
+if (isset($_GET['excluir'])) {
+    $idExcluir = (int) $_GET['excluir'];
+    try {
+        $stmt = $pdo->prepare("DELETE FROM users WHERE id_user = :id");
+        $stmt->execute([':id' => $idExcluir]);
+        $mensagem = "Usuário excluído com sucesso.";
+    } catch (PDOException $e) {
+        $mensagem = "Erro ao excluir: " . $e->getMessage();
     }
+}
 
-    button {
-        padding: 10px 20px;
-        background-color: #2c3e66;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        margin-left: 10px;
-        font-weight: bold;
-    }
+// BUSCA
+$busca = $_GET['busca'] ?? '';
+$query = "SELECT * FROM users WHERE nome LIKE :busca OR email LIKE :busca ORDER BY id_user ASC";
+$stmt = $pdo->prepare($query);
+$stmt->execute([':busca' => '%' . $busca . '%']);
+$usuarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
 
-    button:hover {
-        background-color: #223456;
-    }
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Usuários Cadastrados</title>
+    <link rel="stylesheet" href="sistema2.css">
+</head>
+<body>
 
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        background-color: #ffffff;
-        color: #000;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    }
+    <h2>Usuários Cadastrados</h2>
 
-    th, td {
-        padding: 12px 15px;
-        border-bottom: 1px solid #ddd;
-        text-align: center;
-    }
+<?php if (!empty($mensagem)) echo "<p><strong>$mensagem</strong></p>"; ?>
 
-    th {
-        background-color: #354982; /* Cabeçalho da tabela azul escuro */
-        color: white;
-    }
+<form method="GET" action="">
+    <input type="text" name="busca" placeholder="Buscar por nome ou email" value="<?= htmlspecialchars($busca) ?>">
+    <button type="submit">Buscar</button>
+</form>
 
-    tr:nth-child(even) {
-        background-color: #f2f2f2;
-    }
+<table border="1" cellpadding="8" cellspacing="0">
+    <tr>
+        <th>ID</th>
+        <th>Nome</th>
+        <th>CPF</th>
+        <th>Email</th>
+        <th>CEP</th>
+        <th>Cargo</th>
+        <th>Salário</th>
+        <th>Data de Admissão</th>
+        <th>Ações</th>
+    </tr>
+    <?php foreach ($usuarios as $usuario): ?>
+    <tr>
+        <td><?= $usuario['id_user'] ?></td>
+        <td><?= htmlspecialchars($usuario['nome']) ?></td>
+        <td><?= htmlspecialchars($usuario['cpf']) ?></td>
+        <td><?= htmlspecialchars($usuario['email']) ?></td>
+        <td><?= htmlspecialchars($usuario['cep']) ?></td>
+        <td><?= htmlspecialchars($usuario['cargo']) ?></td>
+        <td><?= number_format($usuario['salario'], 2, ',', '.') ?></td>
+        <td><?= htmlspecialchars($usuario['data_admissao']) ?></td>
+        <td>
+            <a href="editar.php?id=<?= $usuario['id_user'] ?>">Editar</a> | 
+            <a href="sistema2.php?excluir=<?= $usuario['id_user'] ?>" onclick="return confirm('Deseja excluir este usuário?')">Excluir</a>
+        </td>
+    </tr>
+    <?php endforeach ?>
+</table>
 
-    a {
-        color: #000000;
-        text-decoration: none;
-        margin: 0 5px;
-        transition: opacity 0.3s ease;
-    }
+<a href="cadastro.php">Cadastrar Novo Usuário</a>
 
-    a:hover {
-        opacity: 0.8;
-        text-decoration: underline;
-    }
-
-    p strong {
-        display: block;
-        text-align: center;
-        margin-bottom: 20px;
-        color: #ffd700;
-    }
-
-    a[href="cadastro.php"] {
-        display: block;
-        text-align: center;
-        margin-top: 30px;
-        color: #000000;
-        font-weight: bold;
-        font-size: 16px;
-    }
-
-    a[href="cadastro.php"]:hover {
-        text-decoration: underline;
-    }
-
+</body>
+</html>
